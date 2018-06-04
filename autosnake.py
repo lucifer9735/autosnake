@@ -1,11 +1,12 @@
 import curses
+import time
 from random import randint
 
-HEIGHT = 10
-WIDTH = 20
+HEIGHT = 15
+WIDTH = 30
 FIELD_SIZE = HEIGHT * WIDTH
 
-SPEED = 50
+SPEED = 10
 food = 3 * WIDTH + 3
 key = 1 
 score = 1
@@ -32,6 +33,11 @@ board = [0] * FIELD_SIZE
 snake = [0] * (FIELD_SIZE + 1)
 snake[HEAD] = 1*WIDTH + 1
 snake_size = 1
+
+tmpboard = [0] * FIELD_SIZE
+tmpsnake = [0] * (FIELD_SIZE + 1)
+tmpsnake[HEAD] = 1*WIDTH + 1
+tmpsnake_size = 1
 
 def shift_array(arr, size):
     for i in range(size, 0, -1):
@@ -121,6 +127,71 @@ def choose_shortest(pboard, psnake):
             best_move = mov[i]
     return best_move
 
+def choose_longest(pboard, psnake):
+    best_move = ERR
+    max = -1
+    for i in range(4):
+        pidx = psnake[HEAD] + mov[i]
+        if is_movable(psnake[HEAD], mov[i]) and pboard[pidx]<UNDEFINED and pboard[pidx]>max:
+            max = pboard[pidx]
+            best_move = mov[i]
+    return best_move
+
+def follow_tail():
+    global tmpboard, tmpsnake, tmpsnake_size, food
+    tmpsnake_size = snake_size
+    tmpsnake = snake[:]
+    board_reset(tmpboard, tmpsnake, tmpsnake_size)
+    tmpboard[tmpsnake[tmpsnake_size-1]] = FOOD
+    tmpboard[food] = SNAKE
+    board_scan(tmpboard, tmpsnake, tmpsnake[tmpsnake_size-1])
+    tmpboard[tmpsnake[tmpsnake_size-1]] = SNAKE
+    return choose_longest(tmpboard, tmpsnake)
+
+def wander():
+    best_move = ERR
+    for i in range(4):
+        idx = snake[HEAD] + mov[i]
+        if is_movable(snake[HEAD], mov[i]) and board[idx]<SNAKE:
+            return mov[i]
+
+def virtual_move():
+    global board, snake, snake_size, tmpboard, tmpsnake, tmpsnake_size, food
+    tmpboard = board[:]
+    tmpsnake = snake[:]
+    tmpsnake_size = snake_size
+    board_reset(tmpboard, tmpsnake, tmpsnake_size)
+
+    food_eaten = False
+    while not food_eaten:
+        board_scan(tmpboard, tmpsnake, food)
+        tmpmove = choose_shortest(tmpboard, tmpsnake)
+        shift_array(tmpsnake, tmpsnake_size)
+        tmpsnake[HEAD] += tmpmove
+        if tmpsnake[HEAD] == food:
+            tmpsnake_size += 1
+            board_reset(tmpboard, tmpsnake, tmpsnake_size)
+            tmpboard[food] = SNAKE
+            food_eaten = True
+        else:
+            tmpboard[tmpsnake[HEAD]] = SNAKE
+            tmpboard[tmpsnake[tmpsnake_size]] = UNDEFINED
+
+def is_tail_available():
+    global tmpboard, tmpsnake, tmpsnake_size, food
+    tmpboard[tmpsnake[tmpsnake_size-1]] = 0
+    tmpboard[food] = SNAKE
+    result = board_scan(tmpboard, tmpsnake, tmpsnake[tmpsnake_size-1])
+    return result
+
+def find_safe_way():
+    global board, snake
+    safe_move = ERR
+    virtual_move()
+    if is_tail_available():
+        return choose_shortest(board, snake)
+    safe_move = follow_tail()
+    return safe_move
 
 curses.initscr()
 win = curses.newwin(HEIGHT, WIDTH, 0, 0)
@@ -137,6 +208,7 @@ while event != 27:
     win.addstr(0, 2, ' S:' + str(score) + ' ')
     win.timeout(SPEED)
     event = win.getch()
+    if event == 32: time.sleep(1)
 #    if event != -1:
 #        if event == 27:break
 #        elif event == h:
@@ -148,15 +220,14 @@ while event != 27:
 #        elif event == k:
 #            key = key if key == DOWN else UP
 #    make_move(key)
-    key = key if event == -1 else evet
     board_reset(board, snake, snake_size)
     if board_scan(board, snake, food):
-        best_move = choose_shortest(board, snake)
+        best_move = find_safe_way()
+    else:
+        best_move = follow_tail()
 
     if best_move != ERR: make_move(best_move)
-    else:
-        print("error!")
-        break
+    else: make_move(wander())
 
 win.keypad(0)
 curses.echo()
