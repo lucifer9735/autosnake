@@ -6,6 +6,8 @@ Slug: autosnake
 
 <!-- PELICAN_END_SUMMARY -->
 
+**v3** 走满全图95%
+
 ---
 
 **v2** 虚拟蛇探路续命版。

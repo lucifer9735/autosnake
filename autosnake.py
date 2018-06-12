@@ -6,7 +6,7 @@ HEIGHT = 15
 WIDTH = 30
 FIELD_SIZE = HEIGHT * WIDTH
 
-SPEED = 10
+SPEED = 1
 food = 3 * WIDTH + 3
 key = 1 
 score = 1
@@ -182,6 +182,9 @@ def is_tail_available():
     tmpboard[tmpsnake[tmpsnake_size-1]] = 0
     tmpboard[food] = SNAKE
     result = board_scan(tmpboard, tmpsnake, tmpsnake[tmpsnake_size-1])
+    for i in range(4):
+        if tmpsnake_size>3 and tmpboard[tmpsnake[HEAD]+mov[i]]==tmpboard[tmpsnake[tmpsnake_size-1]]:
+            result = False
     return result
 
 def find_safe_way():
